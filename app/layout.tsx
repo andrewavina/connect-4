@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import Link from "next/link";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { AppHeader } from '@/components/layout/AppHeader';
 
 /** Pre-paint theme (flash-free). */
 const themeScript = `
@@ -16,16 +15,24 @@ const themeScript = `
 })();
 `;
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+});
 
 export const metadata: Metadata = {
-  title: "Connect Four",
-  description: "A polished Connect Four built with Next.js 15, Tailwind, and TypeScript.",
-  other: { "color-scheme": "light dark" },
+  title: 'Connect Four',
+  description:
+    'A polished Connect Four built with Next.js 15, Tailwind, and TypeScript.',
+  other: { 'color-scheme': 'light dark' },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -34,14 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-dvh`}
       >
-        <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/50">
-          <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-            <Link href="/" aria-label="Home" >
-            <h1 className="text-base font-semibold tracking-tight">Connect Four</h1>
-            </Link>
-            <ThemeToggle />
-          </div>
-        </header>
+        <AppHeader />
 
         <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
 
