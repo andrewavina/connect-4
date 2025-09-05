@@ -132,7 +132,7 @@ export default function GamePage() {
       </div>
 
       {/* Board */}
-      <div className="relative rounded-xl border bg-muted p-2">
+      <div className="relative rounded-xl border bg-muted p-2 shadow-inner">
         {/* Visual grid of cells */}
         <div
           role="grid"
@@ -157,7 +157,7 @@ export default function GamePage() {
               type="button"
               aria-label={`Drop in column ${c + 1}`}
               onClick={() => handleColumnClick(c)}
-              className="pointer-events-auto h-full w-full rounded-md focus:outline-none"
+              className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:bg-foreground/10 hover:backdrop-brightness-110 focus:bg-foreground/15 focus:backdrop-brightness-125"
             />
           ))}
         </div>
@@ -214,12 +214,15 @@ function Row({
 }
 
 function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
+  // const base =
+  //   'h-[94%] w-[94%] rounded-full shadow-inner transition-transform duration-200';
   const base =
-    'h-[94%] w-[94%] rounded-full shadow-inner transition-transform duration-200';
+    'h-[92%] w-[92%] rounded-full shadow-inner transition-transform duration-200';
+
   if (cell === 1) {
     return (
       <div
-        className={`${base} bg-red-500/90`}
+        className={`${base} bg-red-500/90 ring-1 ring-foreground/10`}
         style={
           winning ? { boxShadow: '0 0 0 3px rgb(239 68 68 / 0.6)' } : undefined
         }
@@ -229,7 +232,7 @@ function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
   if (cell === 2) {
     return (
       <div
-        className={`${base} bg-yellow-400/90`}
+        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10`}
         style={
           winning ? { boxShadow: '0 0 0 3px rgb(250 204 21 / 0.6)' } : undefined
         }
@@ -237,7 +240,16 @@ function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
     );
   }
   // empty slot visual
-  return <div className={`${base} bg-muted`} />;
+  return (
+    <div
+      className={`${base} ring-1 ring-foreground/10`}
+      style={{
+        // faint “hole” look that adapts to light/dark via tokens
+        background:
+          'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.08), rgba(0,0,0,0.06) 60%, transparent 70%)',
+      }}
+    />
+  );
 }
 
 function TurnLabel({ player }: { player: Player }) {
