@@ -1,7 +1,7 @@
 // app/game/page.tsx
-"use client";
+'use client';
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from 'react';
 import {
   Board,
   COLS,
@@ -12,7 +12,7 @@ import {
   createBoard,
   isDraw as engineIsDraw,
   nextPlayer,
-} from "@/lib/game/engine";
+} from '@/lib/game/engine';
 
 type Snapshot = {
   board: Board;
@@ -22,17 +22,21 @@ type Snapshot = {
 
 export default function GamePage() {
   const [board, setBoard] = useState<Board>(() => createBoard());
-  const [current, setCurrent] = useState<Player>("R");
-  const [winningLine, setWinningLine] = useState<[number, number][] | null>(null);
+  const [current, setCurrent] = useState<Player>('R');
+  const [winningLine, setWinningLine] = useState<[number, number][] | null>(
+    null
+  );
   const [draw, setDraw] = useState(false);
-  const [lastMove, setLastMove] = useState<{ row: number; col: number } | null>(null);
+  const [lastMove, setLastMove] = useState<{ row: number; col: number } | null>(
+    null
+  );
   const [history, setHistory] = useState<Snapshot[]>([]);
 
   const gameEnded = !!winningLine || draw;
 
   const onNewGame = useCallback(() => {
     setBoard(createBoard());
-    setCurrent("R");
+    setCurrent('R');
     setWinningLine(null);
     setDraw(false);
     setLastMove(null);
@@ -57,7 +61,11 @@ export default function GamePage() {
         // snapshot for undo
         setHistory((h) => [...h, { board, current, lastMove }]);
 
-        const { board: nextBoard, row, col: placedCol } = applyMove(board, col, current);
+        const {
+          board: nextBoard,
+          row,
+          col: placedCol,
+        } = applyMove(board, col, current);
         setBoard(nextBoard);
         setLastMove({ row, col: placedCol });
 
@@ -94,7 +102,8 @@ export default function GamePage() {
         <div aria-live="polite" className="text-sm text-muted-foreground">
           {winningLine ? (
             <span>
-              <WinnerLabel line={winningLine} /> wins!
+              {/* <WinnerLabel line={winningLine} /> wins! */}
+              <WinnerLabel /> wins!
             </span>
           ) : draw ? (
             <span>It’s a draw.</span>
@@ -115,7 +124,7 @@ export default function GamePage() {
             disabled={history.length === 0 || !!winningLine}
             className="rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
             aria-disabled={history.length === 0 || !!winningLine}
-            title={winningLine ? "Undo disabled after a win" : "Undo last move"}
+            title={winningLine ? 'Undo disabled after a win' : 'Undo last move'}
           >
             Undo
           </button>
@@ -126,11 +135,10 @@ export default function GamePage() {
       <div className="relative rounded-xl border bg-muted p-2">
         {/* Visual grid of cells */}
         <div
-  role="grid"
-  aria-label="Connect Four board"
-  className="grid aspect-[7/6] grid-rows-6 gap-1 rounded-lg bg-background p-2"
->
-
+          role="grid"
+          aria-label="Connect Four board"
+          className="grid aspect-[7/6] grid-rows-6 gap-1 rounded-lg bg-background p-2"
+        >
           {Array.from({ length: ROWS }).map((_, r) => (
             <Row
               key={r}
@@ -159,7 +167,8 @@ export default function GamePage() {
       <div className="mt-6 text-center">
         {winningLine ? (
           <p className="text-lg font-medium">
-            <WinnerLabel line={winningLine} /> wins!
+            {/* <WinnerLabel line={winningLine} /> wins! */}
+            <WinnerLabel /> wins!
           </p>
         ) : draw ? (
           <p className="text-lg font-medium">It’s a draw.</p>
@@ -193,7 +202,7 @@ function Row({
           <div
             role="gridcell"
             key={key}
-            aria-label={cell === 0 ? "empty" : cell === 1 ? "red" : "yellow"}
+            aria-label={cell === 0 ? 'empty' : cell === 1 ? 'red' : 'yellow'}
             className={`relative flex aspect-square items-center justify-center`}
           >
             <Disc cell={cell} winning={isWin} />
@@ -206,12 +215,14 @@ function Row({
 
 function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
   const base =
-    "h-[94%] w-[94%] rounded-full shadow-inner transition-transform duration-200";
+    'h-[94%] w-[94%] rounded-full shadow-inner transition-transform duration-200';
   if (cell === 1) {
     return (
       <div
         className={`${base} bg-red-500/90`}
-        style={winning ? { boxShadow: "0 0 0 3px rgb(239 68 68 / 0.6)" } : undefined}
+        style={
+          winning ? { boxShadow: '0 0 0 3px rgb(239 68 68 / 0.6)' } : undefined
+        }
       />
     );
   }
@@ -219,7 +230,9 @@ function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
     return (
       <div
         className={`${base} bg-yellow-400/90`}
-        style={winning ? { boxShadow: "0 0 0 3px rgb(250 204 21 / 0.6)" } : undefined}
+        style={
+          winning ? { boxShadow: '0 0 0 3px rgb(250 204 21 / 0.6)' } : undefined
+        }
       />
     );
   }
@@ -230,8 +243,8 @@ function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
 function TurnLabel({ player }: { player: Player }) {
   return (
     <>
-      <span className={player === "R" ? "text-red-500" : "text-yellow-500"}>
-        {player === "R" ? "Red" : "Yellow"}
+      <span className={player === 'R' ? 'text-red-500' : 'text-yellow-500'}>
+        {player === 'R' ? 'Red' : 'Yellow'}
       </span>
       <span>’s turn</span>
     </>
