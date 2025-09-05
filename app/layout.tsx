@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import Link from "next/link";
 
 /** Pre-paint theme (flash-free). */
 const themeScript = `
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/50">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+            <Link href="/" aria-label="Home" >
             <h1 className="text-base font-semibold tracking-tight">Connect Four</h1>
+            </Link>
             <ThemeToggle />
           </div>
         </header>
