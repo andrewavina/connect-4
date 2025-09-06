@@ -1,7 +1,11 @@
-// app/login/page.tsx
-import { login, signup } from './actions';
+import { sendMagicLink } from './actions';
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams?: { sent?: string; error?: string };
+}) {
+  const sent = searchParams?.sent === '1';
   return (
     <main
       className="
@@ -25,79 +29,40 @@ export default function LoginPage() {
           </p>
         </header>
 
-        <form className="space-y-5">
-          <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              className="
-  block w-full rounded-xl px-3 py-2 text-[15px] outline-none transition
-  bg-background text-foreground
-  border border-border shadow-sm
-  placeholder:text-muted-foreground
-  focus:ring-2 focus:ring-ring
-"
-            />
+        {sent ? (
+          <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--muted)] px-4 py-3 text-sm text-muted-foreground">
+            Check your email for a sign-in link. You can close this tab.
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-              className="
-  block w-full rounded-xl px-3 py-2 text-[15px] outline-none transition
-  bg-background text-foreground
-  border border-border shadow-sm
-  placeholder:text-muted-foreground
-  focus:ring-2 focus:ring-ring
-"
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              formAction={login}
-              className="
-  inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium
-  bg-primary text-primary-foreground hover:opacity-95
-  focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60
-"
-            >
-              Log in
-            </button>
-
-            <button
-              formAction={signup}
-              className="
-  inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium
-  bg-card text-card-foreground border border-border shadow-sm
-  hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring
-"
-            >
-              Sign up
-            </button>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
+        ) : (
+          <form className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-medium">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                className="block w-full rounded-xl bg-background text-foreground px-3 py-2 text-[15px]
+                           border border-[color:var(--border)] shadow-sm outline-none transition
+                           placeholder:text-muted-foreground
+                           focus:ring-4 focus:ring-[color:var(--ring)] dark:bg-neutral-900"
+              />
             </div>
-          </div>
-        </form>
+
+            <button
+              formAction={sendMagicLink}
+              className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white
+                         shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-4 focus:ring-[color:var(--ring)]
+                         disabled:opacity-60"
+            >
+              Send magic link
+            </button>
+          </form>
+        )}
       </div>
     </main>
   );

@@ -1,46 +1,39 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
 
-export async function login(formData: FormData) {
-  const supabase = await createClient();
-
-  // type-casting here for convenience
-  // in practice, you should validate your inputs
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-  };
-
-  const { error } = await supabase.auth.signInWithPassword(data);
-
-  if (error) {
-    redirect('/error');
-  }
-
-  revalidatePath('/', 'layout');
-  redirect('/');
+function getOrigin() {
+  // Prefer explicit site URL; fall back to Vercel URL in prod; localhost in dev
+  const site = process.env.NEXT_PUBLIC_SITE_URL;
+  if (site) return site.replace(/\/$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
 }
 
-export async function signup(formData: FormData) {
+export async function sendMagicLink(formData: FormData) {
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  if (!email) redirect('/login?error=missing_email');
+
   const supabase = await createClient();
+  const origin = getOrigin();
 
-  // type-casting here for convenience
-  // in practice, you should validate your inputs
-  const data = {
-    email: formData.get('email') as string,
-    password: formData.get('password') as string,
-  };
-
-  const { error } = await supabase.auth.signUp(data);
+  // This triggers Supabase to send the email magic link
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      // Where the link will land to complete sign-in:
+      emailRedirectTo: `${origin}/auth/confirm?next=/game`,
+      shouldCreateUser: true, // create on first sign-in
+    },
+  });
 
   if (error) {
-    redirect('/error');
+    // don’t leak whether an email exists; just show generic UI
+    redirect(`/login?sent=1`);
   }
-
-  revalidatePath('/', 'layout');
-  redirect('/');
+  redirect(`/login?sent=1`);
 }
