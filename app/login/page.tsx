@@ -1,11 +1,12 @@
 import { sendMagicLink } from './actions';
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams?: { sent?: string; error?: string };
-}) {
-  const sent = searchParams?.sent === '1';
+// export default function LoginPage({}: // searchParams,
+// {
+// searchParams?: { sent?: string; error?: string };
+// }) {
+// const sent = searchParams?.sent === '1';
+export default function LoginPage() {
+  const sent = false;
   return (
     <main
       className="
