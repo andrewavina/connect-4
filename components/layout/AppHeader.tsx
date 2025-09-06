@@ -31,6 +31,12 @@ export function AppHeader({
           </span>
         </Link>
 
+        <Link href="/login">
+          <button className="text-sm text-muted-foreground cursor-pointer">
+            Log in
+          </button>
+        </Link>
+
         <div className="flex items-center gap-2">
           {rightSlot}
           <ThemeToggle />

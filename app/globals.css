@@ -1,22 +1,67 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: 255 255 255;
-  --foreground: 15 23 42;
-  --muted: 248 250 252;
+  /* page surface + text (LIGHT) */
+  --background: 255 255 255; /* white */
+  --foreground: 15 23 42; /* slate-900-ish */
+  /* surfaces */
+  --card: 255 255 255; /* white card in light */
+  --card-foreground: 15 23 42; /* dark text on card */
+  --muted: 248 250 252; /* subtle fills */
+  --muted-foreground: 100 116 139; /* secondary text */
+  --primary: 79 70 229; /* indigo-ish */
+  --primary-foreground: 255 255 255;
+
+  --border: 15 23 42; /* used with opacity */
   --ring: 59 130 246;
 }
-[data-theme="dark"] {
-  --background: 2 6 23;
-  --foreground: 226 232 240;
-  --muted: 15 23 42;
+
+[data-theme='dark'] {
+  /* page surface + text (DARK) */
+  --background: 10 12 16; /* near-black/slate */
+  --foreground: 226 232 240; /* slate-200-ish */
+  --card: 33 39 55; /* slate-ish card in dark */
+  --card-foreground: 226 232 240; /* light text on card */
+  --muted: 23 27 39;
+  --muted-foreground: 148 163 184;
+  --primary: 99 102 241;
+  --primary-foreground: 255 255 255;
+
+  --border: 203 213 225;
   --ring: 147 197 253;
 }
 
 /* Tailwind v4 token bridge */
-.bg-background { background-color: rgb(var(--background)); }
-.text-foreground { color: rgb(var(--foreground)); }
-.text-muted-foreground { color: rgb(var(--foreground) / 0.7); }
-.border { border-color: rgb(var(--foreground) / 0.12); }
-.hover\:bg-muted\/50:hover { background-color: rgb(var(--muted) / 0.5); }
-.focus\:ring-ring:focus { box-shadow: 0 0 0 3px rgb(var(--ring) / 0.5); }
+.bg-background {
+  background-color: rgb(var(--background));
+}
+.text-foreground {
+  color: rgb(var(--foreground));
+}
+
+.bg-card {
+  background-color: rgb(var(--card));
+}
+.text-card-foreground {
+  color: rgb(var(--card-foreground));
+}
+.bg-muted {
+  background-color: rgb(var(--muted));
+}
+.text-muted-foreground {
+  color: rgb(var(--muted-foreground));
+}
+
+.border-border {
+  border-color: rgb(var(--border) / 0.12);
+}
+.focus\:ring-ring:focus {
+  box-shadow: 0 0 0 3px rgb(var(--ring) / 0.5);
+}
+
+.bg-primary {
+  background-color: rgb(var(--primary));
+}
+.text-primary-foreground {
+  color: rgb(var(--primary-foreground));
+}
