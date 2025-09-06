@@ -1,11 +1,8 @@
-// TODO - determine if needed for supabase. if not, can delete
-// import { type NextRequest } from 'next/server';
-// import { updateSession } from '@/lib/supabase/middleware';
+import { type NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
-// export async function middleware(request: NextRequest) {
-export async function middleware() {
-  // return await updateSession(request);
-  return console.log('middleware running');
+export async function middleware(request: NextRequest) {
+  return await updateSession(request);
 }
 
 export const config = {
