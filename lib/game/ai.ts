@@ -1,0 +1,245 @@
+// lib/game/ai.ts
+import {
+  Board,
+  Player,
+  COLS,
+  ROWS,
+  applyMove,
+  checkWin,
+  isDraw,
+  playerToCell,
+  nextPlayer,
+} from '@/lib/game/engine';
+
+/** Difficulty → search depth */
+export function depthForDifficulty(d: 1 | 2 | 3) {
+  return d === 1 ? 3 : d === 2 ? 5 : 7;
+}
+
+/** Return best column for the given player (AI) using minimax + alpha-beta. */
+export function aiBestMove(
+  board: Board,
+  current: Player,
+  aiPlayer: Player,
+  depth: number
+): number {
+  // move ordering: center first is strong in Connect Four
+  const order = [3, 2, 4, 1, 5, 0, 6];
+  let bestCol = order[0];
+  let bestScore = -Infinity;
+
+  for (const col of order) {
+    try {
+      const { board: b2, row, col: c2 } = applyMove(board, col, current);
+      const win = checkWin(b2, row, c2);
+      const score =
+        win && win.winner === aiPlayer
+          ? Infinity
+          : -negamax(
+              b2,
+              nextPlayer(current),
+              aiPlayer,
+              depth - 1,
+              -Infinity,
+              Infinity
+            );
+      if (score > bestScore) {
+        bestScore = score;
+        bestCol = col;
+      }
+    } catch {
+      /* column full */
+    }
+  }
+  return bestCol;
+}
+
+/** Negamax (minimax variant) with alpha-beta pruning */
+function negamax(
+  board: Board,
+  current: Player,
+  aiPlayer: Player,
+  depth: number,
+  alpha: number,
+  beta: number
+): number {
+  // quick terminal checks from any last move perspective:
+  // we don't know last move; so evaluate terminal by scanning all cells cheaply
+  const term = terminalScore(board, aiPlayer);
+  if (term !== null) return term;
+  if (depth === 0) return heuristic(board, aiPlayer);
+
+  const order = [3, 2, 4, 1, 5, 0, 6];
+  let maxScore = -Infinity;
+
+  for (const col of order) {
+    try {
+      const { board: b2, row, col: c2 } = applyMove(board, col, current);
+      const win = checkWin(b2, row, c2);
+      const score = win
+        ? win.winner === aiPlayer
+          ? Infinity
+          : -Infinity
+        : -negamax(b2, nextPlayer(current), aiPlayer, depth - 1, -beta, -alpha);
+
+      if (score > maxScore) maxScore = score;
+      if (maxScore > alpha) alpha = maxScore;
+      if (alpha >= beta) break; // prune
+    } catch {
+      /* full */
+    }
+  }
+  return maxScore;
+}
+
+/** Terminal: +∞ if AI already won, -∞ if AI lost, 0 for draw; otherwise null. */
+function terminalScore(board: Board, aiPlayer: Player): number | null {
+  // scan all 4-in-a-row windows for a win
+  const ai = playerToCell(aiPlayer);
+  const opp = playerToCell(nextPlayer(aiPlayer));
+
+  if (hasConnect4(board, ai)) return Infinity;
+  if (hasConnect4(board, opp)) return -Infinity;
+  if (isDraw(board)) return 0;
+  return null;
+}
+
+/** Heuristic: center bias + 2/3-in-a-row scores; opponent blocking penalties. */
+function heuristic(board: Board, aiPlayer: Player): number {
+  const ai = playerToCell(aiPlayer);
+  const opp = playerToCell(nextPlayer(aiPlayer));
+
+  let score = 0;
+
+  // center column preference
+  const centerCol = Math.floor(COLS / 2);
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r][centerCol] === ai) score += 4;
+  }
+
+  // score all 4-length windows
+  const windows = enumerateWindows(board);
+  for (const win of windows) {
+    const a = win.filter((v) => v === ai).length;
+    const o = win.filter((v) => v === opp).length;
+    const e = win.filter((v) => v === 0).length;
+
+    if (a === 4) score += 100000;
+    else if (a === 3 && e === 1) score += 100;
+    else if (a === 2 && e === 2) score += 10;
+
+    if (o === 3 && e === 1) score -= 80; // block their threes
+    else if (o === 2 && e === 2) score -= 6;
+  }
+  return score;
+}
+
+function hasConnect4(board: Board, disc: 0 | 1 | 2): boolean {
+  // horizontal
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS - 3; c++)
+      if (
+        lineEq(
+          board[r][c],
+          board[r][c + 1],
+          board[r][c + 2],
+          board[r][c + 3],
+          disc
+        )
+      )
+        return true;
+
+  // vertical
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r < ROWS - 3; r++)
+      if (
+        lineEq(
+          board[r][c],
+          board[r + 1][c],
+          board[r + 2][c],
+          board[r + 3][c],
+          disc
+        )
+      )
+        return true;
+
+  // diag ↘
+  for (let r = 0; r < ROWS - 3; r++)
+    for (let c = 0; c < COLS - 3; c++)
+      if (
+        lineEq(
+          board[r][c],
+          board[r + 1][c + 1],
+          board[r + 2][c + 2],
+          board[r + 3][c + 3],
+          disc
+        )
+      )
+        return true;
+
+  // diag ↙
+  for (let r = 3; r < ROWS; r++)
+    for (let c = 0; c < COLS - 3; c++)
+      if (
+        lineEq(
+          board[r][c],
+          board[r - 1][c + 1],
+          board[r - 2][c + 2],
+          board[r - 3][c + 3],
+          disc
+        )
+      )
+        return true;
+
+  return false;
+}
+
+function lineEq(a: number, b: number, c: number, d: number, disc: number) {
+  return a === disc && b === disc && c === disc && d === disc;
+}
+
+function enumerateWindows(board: Board): number[][] {
+  const wins: number[][] = [];
+
+  // horizontal
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS - 3; c++)
+      wins.push([
+        board[r][c],
+        board[r][c + 1],
+        board[r][c + 2],
+        board[r][c + 3],
+      ]);
+
+  // vertical
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r < ROWS - 3; r++)
+      wins.push([
+        board[r][c],
+        board[r + 1][c],
+        board[r + 2][c],
+        board[r + 3][c],
+      ]);
+
+  // diag ↘
+  for (let r = 0; r < ROWS - 3; r++)
+    for (let c = 0; c < COLS - 3; c++)
+      wins.push([
+        board[r][c],
+        board[r + 1][c + 1],
+        board[r + 2][c + 2],
+        board[r + 3][c + 3],
+      ]);
+
+  // diag ↙
+  for (let r = 3; r < ROWS; r++)
+    for (let c = 0; c < COLS - 3; c++)
+      wins.push([
+        board[r][c],
+        board[r - 1][c + 1],
+        board[r - 2][c + 2],
+        board[r - 3][c + 3],
+      ]);
+
+  return wins;
+}

@@ -1,7 +1,7 @@
 // app/game/page.tsx
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Board,
   COLS,
@@ -13,6 +13,7 @@ import {
   isDraw as engineIsDraw,
   nextPlayer,
 } from '@/lib/game/engine';
+import { aiBestMove, depthForDifficulty } from '@/lib/game/ai';
 
 type Snapshot = {
   board: Board;
@@ -31,6 +32,14 @@ export default function GamePage() {
     null
   );
   const [history, setHistory] = useState<Snapshot[]>([]);
+  const [mode, setMode] = useState<'local' | 'ai'>('local');
+  const [youGoFirst, setYouGoFirst] = useState(true); // in AI mode, true → you are Red
+  const [difficulty, setDifficulty] = useState<1 | 2 | 3>(2);
+  const [thinking, setThinking] = useState(false);
+
+  const humanPlayer: Player =
+    mode === 'ai' ? (youGoFirst ? 'R' : 'Y') : current;
+  const aiPlayer: Player = mode === 'ai' ? (youGoFirst ? 'Y' : 'R') : 'R'; // unused in local
 
   const gameEnded = !!winningLine || draw;
 
@@ -55,8 +64,13 @@ export default function GamePage() {
   }, [history]);
 
   const handleColumnClick = useCallback(
-    (col: number) => {
+    (col: number, opts?: { fromAI?: boolean }) => {
       if (gameEnded) return;
+      if (mode === 'ai' && !opts?.fromAI) {
+        // human can only play when it's their turn and AI isn't thinking
+        if (current !== humanPlayer || thinking) return;
+      }
+
       try {
         // snapshot for undo
         setHistory((h) => [...h, { board, current, lastMove }]);
@@ -95,8 +109,112 @@ export default function GamePage() {
     return set;
   }, [winningLine]);
 
+  useEffect(() => {
+    console.log('$$$$ FX AI thinking...');
+    if (mode !== 'ai' || gameEnded) return;
+    if (current !== aiPlayer) return;
+    if (thinking) return;
+
+    const depth = depthForDifficulty(difficulty);
+    setThinking(true);
+
+    function doAi() {
+      try {
+        const col = aiBestMove(board, current, aiPlayer, depth);
+        console.log('doAi: ', col);
+        // apply via the same handler, but mark as AI so the guard lets it through
+        handleColumnClick(col, { fromAI: true });
+      } finally {
+        setThinking(false);
+      }
+    }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(doAi);
+    } else {
+      setTimeout(doAi, 0);
+    }
+
+    // no cleanup on purpose
+    return;
+  }, [
+    mode,
+    gameEnded,
+    current,
+    aiPlayer,
+    thinking,
+    difficulty,
+    board,
+    handleColumnClick,
+  ]);
+
+  useEffect(() => {
+    // changing mode or who goes first should start a fresh game
+    setThinking(false);
+    onNewGame();
+  }, [mode, youGoFirst]);
+
   return (
     <section className="mx-auto max-w-3xl">
+      <div className="flex items-center gap-3">
+        {/* Mode toggle */}
+        <div className="inline-flex rounded-full border p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode('local')}
+            className={`px-3 py-1.5 text-sm rounded-full ${
+              mode === 'local' ? 'bg-muted' : ''
+            }`}
+          >
+            Local
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('ai')}
+            className={`px-3 py-1.5 text-sm rounded-full ${
+              mode === 'ai' ? 'bg-muted' : ''
+            }`}
+          >
+            vs Computer
+          </button>
+        </div>
+
+        {/* AI-only options */}
+        {mode === 'ai' && (
+          <>
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={youGoFirst}
+                onChange={(e) => setYouGoFirst(e.target.checked)}
+                className="h-4 w-4"
+              />
+              You go first
+            </label>
+
+            <label className="inline-flex items-center gap-2 text-sm">
+              Difficulty
+              <select
+                value={difficulty}
+                onChange={(e) =>
+                  setDifficulty(Number(e.target.value) as 1 | 2 | 3)
+                }
+                className="rounded-md border bg-background px-2 py-1 text-sm"
+              >
+                <option value={1}>Easy</option>
+                <option value={2}>Medium</option>
+                <option value={3}>Hard</option>
+              </select>
+            </label>
+
+            {thinking && (
+              <span className="text-sm text-muted-foreground">
+                Computer is thinking…
+              </span>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Controls */}
       <div className="mb-6 flex items-center justify-between">
         <div aria-live="polite" className="text-sm text-muted-foreground">
