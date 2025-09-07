@@ -99,7 +99,7 @@ export default function GamePage() {
         setHistory((h) => h.slice(0, -1)); // revert snapshot if move failed
       }
     },
-    [board, current, gameEnded, lastMove]
+    [board, current, gameEnded, lastMove, humanPlayer, thinking, mode]
   );
 
   // For rendering: convenient map of winning cells
@@ -129,7 +129,7 @@ export default function GamePage() {
       }
     }
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(doAi);
+      window.requestIdleCallback(doAi);
     } else {
       setTimeout(doAi, 0);
     }
@@ -151,7 +151,7 @@ export default function GamePage() {
     // changing mode or who goes first should start a fresh game
     setThinking(false);
     onNewGame();
-  }, [mode, youGoFirst]);
+  }, [mode, youGoFirst, onNewGame]);
 
   return (
     <section className="mx-auto max-w-3xl">
