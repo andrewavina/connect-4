@@ -1,7 +1,7 @@
 // app/game/page.tsx
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Board,
   COLS,
@@ -36,12 +36,17 @@ export default function GamePage() {
   const [youGoFirst, setYouGoFirst] = useState(true); // in AI mode, true → you are Red
   const [difficulty, setDifficulty] = useState<1 | 2 | 3>(2);
   const [thinking, setThinking] = useState(false);
+  const [pendingAiStart, setPendingAiStart] = useState(false);
+
+  const hasStarted = lastMove !== null || history.length > 0;
 
   const humanPlayer: Player =
     mode === 'ai' ? (youGoFirst ? 'R' : 'Y') : current;
   const aiPlayer: Player = mode === 'ai' ? (youGoFirst ? 'Y' : 'R') : 'R'; // unused in local
 
   const gameEnded = !!winningLine || draw;
+
+  const lastAiTurnRef = useRef<number>(-1);
 
   const onNewGame = useCallback(() => {
     setBoard(createBoard());
@@ -50,6 +55,7 @@ export default function GamePage() {
     setDraw(false);
     setLastMove(null);
     setHistory([]);
+    lastAiTurnRef.current = -1;
   }, []);
 
   const onUndo = useCallback(() => {
@@ -110,10 +116,14 @@ export default function GamePage() {
   }, [winningLine]);
 
   useEffect(() => {
-    console.log('$$$$ FX AI thinking...');
     if (mode !== 'ai' || gameEnded) return;
     if (current !== aiPlayer) return;
     if (thinking) return;
+    // Don’t double-schedule for the same position/turn
+    const thisTurn = history.length;
+    if (pendingAiStart) return; // opening handled elsewhere
+    if (lastAiTurnRef.current === thisTurn) return;
+    lastAiTurnRef.current = thisTurn;
 
     const depth = depthForDifficulty(difficulty);
     setThinking(true);
@@ -145,13 +155,45 @@ export default function GamePage() {
     difficulty,
     board,
     handleColumnClick,
+    history,
+    pendingAiStart,
   ]);
 
   useEffect(() => {
-    // changing mode or who goes first should start a fresh game
-    setThinking(false);
+    // fresh game whenever mode or who-goes-first changes
     onNewGame();
-  }, [mode, youGoFirst, onNewGame]);
+    // if AI is Red (youGoFirst === false), schedule exactly one opening move
+    setPendingAiStart(mode === 'ai' && !youGoFirst);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, youGoFirst]);
+
+  useEffect(() => {
+    if (!pendingAiStart) return;
+    if (mode !== 'ai' || gameEnded || thinking) return;
+    if (current !== aiPlayer) return; // wait until it's AI's turn on the fresh board
+
+    setPendingAiStart(false); // consume the flag
+    // mark this opening turn as scheduled so the normal effect won’t double-fire
+    lastAiTurnRef.current = history.length;
+
+    // run after paint; don't cancel to avoid races
+    setTimeout(() => {
+      const depth = depthForDifficulty(difficulty);
+      const col = aiBestMove(board, current, aiPlayer, depth);
+      handleColumnClick(col, { fromAI: true });
+    }, 0);
+  }, [
+    pendingAiStart,
+    mode,
+    gameEnded,
+    thinking,
+    current,
+    aiPlayer,
+    difficulty,
+    board,
+    handleColumnClick,
+    history,
+  ]);
 
   return (
     <section className="mx-auto max-w-3xl">
@@ -161,18 +203,20 @@ export default function GamePage() {
           <button
             type="button"
             onClick={() => setMode('local')}
+            disabled={hasStarted}
             className={`px-3 py-1.5 text-sm rounded-full ${
               mode === 'local' ? 'bg-muted' : ''
-            }`}
+            } disabled:opacity-50 disabled:pointer-events-none`}
           >
             Local
           </button>
           <button
             type="button"
             onClick={() => setMode('ai')}
+            disabled={hasStarted}
             className={`px-3 py-1.5 text-sm rounded-full ${
               mode === 'ai' ? 'bg-muted' : ''
-            }`}
+            } disabled:opacity-50 disabled:pointer-events-none`}
           >
             vs Computer
           </button>
@@ -187,6 +231,7 @@ export default function GamePage() {
                 checked={youGoFirst}
                 onChange={(e) => setYouGoFirst(e.target.checked)}
                 className="h-4 w-4"
+                disabled={hasStarted}
               />
               You go first
             </label>
@@ -198,6 +243,7 @@ export default function GamePage() {
                 onChange={(e) =>
                   setDifficulty(Number(e.target.value) as 1 | 2 | 3)
                 }
+                disabled={hasStarted}
                 className="rounded-md border bg-background px-2 py-1 text-sm"
               >
                 <option value={1}>Easy</option>
