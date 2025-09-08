@@ -195,6 +195,8 @@ export default function GamePage() {
     history,
   ]);
 
+  console.log("'GamePage' render: ", { winningLine });
+
   return (
     <section className="mx-auto max-w-3xl">
       <div className="flex items-center gap-3">
@@ -296,34 +298,35 @@ export default function GamePage() {
       </div>
 
       {/* Board */}
-      <div className="relative rounded-xl border bg-muted p-2 shadow-inner">
-        {/* Visual grid of cells */}
-        <div
-          role="grid"
-          aria-label="Connect Four board"
-          className="grid aspect-[7/6] grid-rows-6 gap-1 rounded-lg bg-background p-2"
-        >
-          {Array.from({ length: ROWS }).map((_, r) => (
-            <Row
-              key={r}
-              rowIndex={r}
-              cells={board[r]}
-              winningSet={winningSet}
-            />
-          ))}
-        </div>
-
-        {/* Column click overlay (large hit targets) */}
-        <div className="pointer-events-none absolute inset-0 grid grid-cols-7">
-          {Array.from({ length: COLS }).map((_, c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={`Drop in column ${c + 1}`}
-              onClick={() => handleColumnClick(c)}
-              className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:bg-foreground/10 hover:backdrop-brightness-110 focus:bg-foreground/15 focus:backdrop-brightness-125"
-            />
-          ))}
+      <div className="mx-auto w-[min(92vw,calc(100dvh-260px))]">
+        <div className="relative rounded-xl border bg-muted p-2 shadow-inner">
+          {/* Visual grid of cells */}
+          <div
+            role="grid"
+            aria-label="Connect Four board"
+            className="grid aspect-[7/6] grid-rows-6 gap-0.5 rounded-lg bg-background p-1.5 sm:gap-1 sm:p-3"
+          >
+            {Array.from({ length: ROWS }).map((_, r) => (
+              <Row
+                key={r}
+                rowIndex={r}
+                cells={board[r]}
+                winningSet={winningSet}
+              />
+            ))}
+          </div>
+          {/* Column click overlay (large hit targets) */}
+          <div className="pointer-events-none absolute inset-0 grid grid-cols-7">
+            {Array.from({ length: COLS }).map((_, c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={`Drop in column ${c + 1}`}
+                onClick={() => handleColumnClick(c)}
+                className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:bg-foreground/10 hover:backdrop-brightness-110 focus:bg-foreground/15 focus:backdrop-brightness-125"
+              />
+            ))}
+          </div>
         </div>
       </div>
 
