@@ -37,6 +37,7 @@ export default function GamePage() {
   const [difficulty, setDifficulty] = useState<1 | 2 | 3>(2);
   const [thinking, setThinking] = useState(false);
   const [pendingAiStart, setPendingAiStart] = useState(false);
+  const [hoverCol, setHoverCol] = useState<number | null>(null);
 
   const hasStarted = lastMove !== null || history.length > 0;
 
@@ -312,6 +313,13 @@ export default function GamePage() {
                 rowIndex={r}
                 cells={board[r]}
                 winningSet={winningSet}
+                board={board}
+                current={current}
+                gameEnded={gameEnded}
+                hoverCol={hoverCol}
+                mode={mode}
+                youGoFirst={youGoFirst}
+                lastMove={lastMove}
               />
             ))}
           </div>
@@ -323,6 +331,10 @@ export default function GamePage() {
                 type="button"
                 aria-label={`Drop in column ${c + 1}`}
                 onClick={() => handleColumnClick(c)}
+                onMouseEnter={() => setHoverCol(c)}
+                onMouseLeave={() => setHoverCol(null)}
+                onFocus={() => setHoverCol(c)}
+                onBlur={() => setHoverCol(null)}
                 className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:bg-foreground/10 hover:backdrop-brightness-110 focus:bg-foreground/15 focus:backdrop-brightness-125"
               />
             ))}
@@ -355,16 +367,46 @@ function Row({
   rowIndex,
   cells,
   winningSet,
+  board,
+  current,
+  gameEnded,
+  hoverCol,
+  mode,
+  youGoFirst,
+  lastMove,
 }: {
   rowIndex: number;
   cells: Board[number];
   winningSet: Set<string>;
+  board: Board;
+  current: Player;
+  gameEnded: boolean;
+  hoverCol: number | null;
+  mode: 'local' | 'ai';
+  youGoFirst: boolean;
+  lastMove: { row: number; col: number } | null;
 }) {
+  function landingRow(board: Board, col: number) {
+    for (let r = ROWS - 1; r >= 0; r--) if (board[r][col] === 0) return r;
+    return -1;
+  }
+  const ghostRow = hoverCol != null ? landingRow(board, hoverCol) : -1;
+
   return (
     <div role="row" className="grid grid-cols-7 gap-1">
       {cells.map((cell, c) => {
         const key = `${rowIndex}:${c}`;
         const isWin = winningSet.has(key);
+        const showGhost =
+          !gameEnded &&
+          hoverCol != null &&
+          c === hoverCol &&
+          rowIndex === ghostRow &&
+          board[rowIndex][c] === 0 &&
+          (mode === 'local' ? true : current === (youGoFirst ? 'R' : 'Y')); // human’s turn in AI mode
+        const isLast =
+          lastMove && lastMove.row === rowIndex && lastMove.col === c;
+
         return (
           <div
             role="gridcell"
@@ -372,7 +414,13 @@ function Row({
             aria-label={cell === 0 ? 'empty' : cell === 1 ? 'red' : 'yellow'}
             className={`relative flex aspect-square items-center justify-center`}
           >
-            <Disc cell={cell} winning={isWin} />
+            <Disc
+              cell={cell}
+              winning={isWin}
+              showGhost={showGhost}
+              current={current}
+              isLast={!!isLast}
+            />
           </div>
         );
       })}
@@ -380,16 +428,42 @@ function Row({
   );
 }
 
-function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
-  // const base =
-  //   'h-[94%] w-[94%] rounded-full shadow-inner transition-transform duration-200';
+function Disc({
+  cell,
+  winning,
+  showGhost,
+  current,
+  isLast,
+}: {
+  cell: 0 | 1 | 2;
+  winning: boolean;
+  showGhost: boolean;
+  current: Player;
+  isLast: boolean;
+}) {
   const base =
     'h-[92%] w-[92%] rounded-full shadow-inner transition-transform duration-200';
+  const anim = isLast ? 'animate-chip-drop' : '';
 
+  if (showGhost) {
+    <div
+      className={`absolute inset-0 flex items-center justify-center pointer-events-none`}
+    >
+      <div
+        className={`h-[92%] w-[92%] rounded-full ring-1 ring-foreground/15`}
+        style={{
+          background:
+            current === 'R'
+              ? 'rgba(239,68,68,0.35)' // red-500/35
+              : 'rgba(250,204,21,0.40)', // yellow-400/40
+        }}
+      />
+    </div>;
+  }
   if (cell === 1) {
     return (
       <div
-        className={`${base} bg-red-500/90 ring-1 ring-foreground/10`}
+        className={`${base} bg-red-500/90 ring-1 ring-foreground/10 ${anim}`}
         style={
           winning ? { boxShadow: '0 0 0 3px rgb(239 68 68 / 0.6)' } : undefined
         }
@@ -399,7 +473,7 @@ function Disc({ cell, winning }: { cell: 0 | 1 | 2; winning: boolean }) {
   if (cell === 2) {
     return (
       <div
-        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10`}
+        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10 ${anim}`}
         style={
           winning ? { boxShadow: '0 0 0 3px rgb(250 204 21 / 0.6)' } : undefined
         }
