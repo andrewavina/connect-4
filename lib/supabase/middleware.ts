@@ -39,16 +39,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/error')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // only guard the routes you actually want private
+  const protectedPaths = ['/history']; // add more later
+  const { pathname } = request.nextUrl;
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+
+  if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.searchParams.set('redirectedFrom', pathname);
     return NextResponse.redirect(url);
+  }
+
+  // optional: keep logged-in users out of /login
+  if (user && pathname === '/login') {
+    return NextResponse.redirect(new URL('/game', request.url));
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
