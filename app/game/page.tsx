@@ -22,6 +22,10 @@ type Snapshot = {
 };
 
 export default function GamePage() {
+  const lastAiTurnRef = useRef<number>(-1);
+  const boardShellRef = useRef<HTMLDivElement>(null);
+  const confettiRef = useRef<HTMLCanvasElement>(null);
+  // STATE:
   const [board, setBoard] = useState<Board>(() => createBoard());
   const [current, setCurrent] = useState<Player>('R');
   const [winningLine, setWinningLine] = useState<[number, number][] | null>(
@@ -46,8 +50,6 @@ export default function GamePage() {
   const aiPlayer: Player = mode === 'ai' ? (youGoFirst ? 'Y' : 'R') : 'R'; // unused in local
 
   const gameEnded = !!winningLine || draw;
-
-  const lastAiTurnRef = useRef<number>(-1);
 
   const onNewGame = useCallback(() => {
     setBoard(createBoard());
@@ -196,6 +198,67 @@ export default function GamePage() {
     history,
   ]);
 
+  useEffect(() => {
+    if (!winningLine) return;
+    const canvas = confettiRef.current;
+    const shell = boardShellRef.current;
+    if (!canvas || !shell) return;
+
+    // size canvas to board
+    const rect = shell.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width);
+    canvas.height = Math.floor(rect.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // simple confetti particles
+    const colors = ['#ef4444', '#facc15', '#60a5fa', '#34d399', '#f472b6'];
+    const N = 120;
+    const P = Array.from({ length: N }, () => ({
+      x: Math.random() * canvas.width,
+      y: -10 - Math.random() * 40,
+      vx: (Math.random() - 0.5) * 2.2,
+      vy: -(2 + Math.random() * 2),
+      g: 0.12 + Math.random() * 0.08,
+      s: 2 + Math.random() * 3,
+      c: colors[(Math.random() * colors.length) | 0],
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.2,
+    }));
+
+    let raf = 0;
+    const step = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of P) {
+        p.vy += p.g;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.s, -p.s, p.s * 2, p.s * 2);
+        ctx.restore();
+      }
+      raf = requestAnimationFrame(step);
+    };
+    step();
+
+    // stop & clear after ~1.3s
+    const t = setTimeout(() => {
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, 1300);
+
+    return () => {
+      clearTimeout(t);
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }, [winningLine]);
+
   console.log("'GamePage' render: ", { winningLine });
 
   return (
@@ -300,7 +363,10 @@ export default function GamePage() {
 
       {/* Board */}
       <div className="mx-auto w-[min(92vw,calc(100dvh-260px))]">
-        <div className="relative rounded-xl border bg-muted p-2 shadow-inner">
+        <div
+          ref={boardShellRef}
+          className="relative rounded-xl border bg-muted p-2 shadow-inner"
+        >
           {/* Visual grid of cells */}
           <div
             role="grid"
@@ -339,6 +405,11 @@ export default function GamePage() {
               />
             ))}
           </div>
+          {/* Confetti canvas */}
+          <canvas
+            ref={confettiRef}
+            className="pointer-events-none absolute inset-0"
+          />
         </div>
       </div>
 
@@ -428,7 +499,7 @@ function Row({
   );
 }
 
-function Disc({
+const Disc = ({
   cell,
   winning,
   showGhost,
@@ -440,58 +511,57 @@ function Disc({
   showGhost: boolean;
   current: Player;
   isLast: boolean;
-}) {
+}) => {
   const base =
     'h-[92%] w-[92%] rounded-full shadow-inner transition-transform duration-200';
   const anim = isLast ? 'animate-chip-drop' : '';
 
-  if (showGhost) {
-    <div
-      className={`absolute inset-0 flex items-center justify-center pointer-events-none`}
-    >
-      <div
-        className={`h-[92%] w-[92%] rounded-full ring-1 ring-foreground/15`}
-        style={{
-          background:
-            current === 'R'
-              ? 'rgba(239,68,68,0.35)' // red-500/35
-              : 'rgba(250,204,21,0.40)', // yellow-400/40
-        }}
-      />
-    </div>;
-  }
   if (cell === 1) {
+    // RED
     return (
       <div
-        className={`${base} bg-red-500/90 ring-1 ring-foreground/10 ${anim}`}
-        style={
-          winning ? { boxShadow: '0 0 0 3px rgb(239 68 68 / 0.6)' } : undefined
-        }
+        className={`${base} bg-red-500/90 ring-1 ring-foreground/10 ${anim} ${
+          winning ? 'animate-win win-glow-red' : ''
+        }`}
       />
     );
   }
   if (cell === 2) {
+    // YELLOW
     return (
       <div
-        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10 ${anim}`}
-        style={
-          winning ? { boxShadow: '0 0 0 3px rgb(250 204 21 / 0.6)' } : undefined
-        }
+        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10 ${anim} ${
+          winning ? 'animate-win win-glow-yellow' : ''
+        }`}
       />
     );
   }
-  // empty slot visual
+  // empty slot + (optional) ghost overlay
   return (
-    <div
-      className={`${base} ring-1 ring-foreground/10`}
-      style={{
-        // faint “hole” look that adapts to light/dark via tokens
-        background:
-          'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.08), rgba(0,0,0,0.06) 60%, transparent 70%)',
-      }}
-    />
+    <>
+      <div
+        className={`${base} ring-1 ring-foreground/10`}
+        style={{
+          background:
+            'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.08), rgba(0,0,0,0.06) 60%, transparent 70%)',
+        }}
+      />
+      {showGhost && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            className="h-[92%] w-[92%] rounded-full ring-1 ring-foreground/15"
+            style={{
+              background:
+                current === 'R'
+                  ? 'rgba(239,68,68,0.35)'
+                  : 'rgba(250,204,21,0.40)',
+            }}
+          />
+        </div>
+      )}
+    </>
   );
-}
+};
 
 function TurnLabel({ player }: { player: Player }) {
   return (
