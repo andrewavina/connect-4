@@ -329,7 +329,11 @@ export default function GamePage() {
 
       {/* Controls */}
       <div className="mb-6 flex items-center justify-between">
-        <div aria-live="polite" className="text-sm text-muted-foreground">
+        <div
+          aria-live="polite"
+          className="text-sm text-muted-foreground"
+          data-testid="status"
+        >
           {winningLine ? (
             <span>
               {/* <WinnerLabel line={winningLine} /> wins! */}
@@ -395,6 +399,7 @@ export default function GamePage() {
               <button
                 key={c}
                 type="button"
+                data-testid={`col-${c}`}
                 aria-label={`Drop in column ${c + 1}`}
                 onClick={() => handleColumnClick(c)}
                 onMouseEnter={() => setHoverCol(c)}
