@@ -50,6 +50,9 @@ export default function GamePage() {
 
   const gameEnded = !!winningLine || draw;
 
+  const showUndo = mode === 'local';
+  const canUndo = showUndo && history.length > 0 && !winningLine && !draw;
+
   const onNewGame = useCallback(() => {
     setBoard(createBoard());
     setCurrent('R');
@@ -63,12 +66,20 @@ export default function GamePage() {
   const onUndo = useCallback(() => {
     if (history.length === 0) return;
     const prev = history[history.length - 1];
+
+    // pop history first
     setHistory((h) => h.slice(0, -1));
+
+    // restore snapshot
     setBoard(prev.board);
     setCurrent(prev.current);
     setLastMove(prev.lastMove);
+
+    // clear end-state & AI state
     setWinningLine(null);
     setDraw(false);
+    setThinking(false);
+    lastAiTurnRef.current = -1; // <-- allow AI to schedule again on this restored turn
   }, [history]);
 
   const handleColumnClick = useCallback(
@@ -210,18 +221,25 @@ export default function GamePage() {
     if (!ctx) return;
 
     // simple confetti particles
-    const colors = ['#ef4444', '#facc15', '#60a5fa', '#34d399', '#f472b6'];
+    const colors = [
+      '#ef4444',
+      '#facc15',
+      '#8b5cf6',
+      '#06d6a0',
+      '#f72585',
+      '#4cc9f0',
+    ];
     const N = 120;
     const P = Array.from({ length: N }, () => ({
       x: Math.random() * canvas.width,
       y: -10 - Math.random() * 40,
-      vx: (Math.random() - 0.5) * 2.2,
-      vy: -(2 + Math.random() * 2),
-      g: 0.12 + Math.random() * 0.08,
-      s: 2 + Math.random() * 3,
+      vx: (Math.random() - 0.5) * 4,
+      vy: -(2 + Math.random() * 3),
+      g: 0.15 + Math.random() * 0.1,
+      s: 2 + Math.random() * 4,
       c: colors[(Math.random() * colors.length) | 0],
       rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.2,
+      vr: (Math.random() - 0.5) * 0.3,
     }));
 
     let raf = 0;
@@ -356,16 +374,19 @@ export default function GamePage() {
           >
             New Game
           </button>
-          <button
-            data-testid="undo"
-            onClick={onUndo}
-            disabled={history.length === 0 || !!winningLine}
-            className="rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-            aria-disabled={history.length === 0 || !!winningLine}
-            title={winningLine ? 'Undo disabled after a win' : 'Undo last move'}
-          >
-            Undo
-          </button>
+          {showUndo && (
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="rounded-full border px-4 py-2 text-sm font-medium transition
+               focus:outline-none focus:ring-2 focus:ring-ring
+               disabled:cursor-not-allowed disabled:opacity-60"
+              aria-disabled={!canUndo}
+              title={!canUndo ? 'Nothing to undo' : 'Undo last move'}
+            >
+              Undo
+            </button>
+          )}
         </div>
       </div>
 
@@ -373,7 +394,7 @@ export default function GamePage() {
       <div className="mx-auto w-[min(92vw,calc(100dvh-260px))]">
         <div
           ref={boardShellRef}
-          className="relative rounded-xl border bg-muted p-2 shadow-inner"
+          className="relative rounded-xl border board-3d p-2"
         >
           {/* Visual grid of cells */}
           <div
@@ -410,7 +431,7 @@ export default function GamePage() {
                 onMouseLeave={() => setHoverCol(null)}
                 onFocus={() => setHoverCol(c)}
                 onBlur={() => setHoverCol(null)}
-                className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:bg-foreground/10 hover:backdrop-brightness-110 focus:bg-foreground/15 focus:backdrop-brightness-125"
+                className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:column-hover focus:column-hover transition-all duration-200"
               />
             ))}
           </div>
@@ -529,7 +550,7 @@ const Disc = ({
     // RED
     return (
       <div
-        className={`${base} bg-red-500/90 ring-1 ring-foreground/10 ${anim} ${
+        className={`${base} disc-red ring-1 ring-foreground/10 ${anim} ${
           winning ? 'animate-win win-glow-red' : ''
         }`}
       />
@@ -539,7 +560,7 @@ const Disc = ({
     // YELLOW
     return (
       <div
-        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10 ${anim} ${
+        className={`${base} disc-yellow ring-1 ring-foreground/10 ${anim} ${
           winning ? 'animate-win win-glow-yellow' : ''
         }`}
       />
@@ -548,23 +569,13 @@ const Disc = ({
   // empty slot + (optional) ghost overlay
   return (
     <>
-      <div
-        className={`${base} ring-1 ring-foreground/10`}
-        style={{
-          background:
-            'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.08), rgba(0,0,0,0.06) 60%, transparent 70%)',
-        }}
-      />
+      <div className={`${base} ring-1 ring-foreground/10 slot-depth`} />
       {showGhost && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
-            className="h-[92%] w-[92%] rounded-full ring-1 ring-foreground/15"
-            style={{
-              background:
-                current === 'R'
-                  ? 'rgba(239,68,68,0.35)'
-                  : 'rgba(250,204,21,0.40)',
-            }}
+            className={`h-[92%] w-[92%] rounded-full ghost-disc ghost-pulse ${
+              current === 'R' ? 'ghost-disc-red' : 'ghost-disc-yellow'
+            }`}
           />
         </div>
       )}
@@ -575,7 +586,11 @@ const Disc = ({
 function TurnLabel({ player }: { player: Player }) {
   return (
     <>
-      <span className={player === 'R' ? 'text-red-500' : 'text-yellow-500'}>
+      <span
+        className={`${
+          player === 'R' ? 'text-red-500' : 'text-yellow-500'
+        } turn-pulse font-semibold`}
+      >
         {player === 'R' ? 'Red' : 'Yellow'}
       </span>
       <span>’s turn</span>
