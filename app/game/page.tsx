@@ -1,4 +1,3 @@
-// app/game/page.tsx
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -13,7 +12,7 @@ import {
   isDraw as engineIsDraw,
   nextPlayer,
 } from '@/lib/game/engine';
-import { aiBestMove, depthForDifficulty } from '@/lib/game/ai';
+import { aiChooseMove } from '@/lib/game/ai';
 
 type Snapshot = {
   board: Board;
@@ -128,12 +127,11 @@ export default function GamePage() {
     if (lastAiTurnRef.current === thisTurn) return;
     lastAiTurnRef.current = thisTurn;
 
-    const depth = depthForDifficulty(difficulty);
     setThinking(true);
 
     function doAi() {
       try {
-        const col = aiBestMove(board, current, aiPlayer, depth);
+        const col = aiChooseMove(board, current, aiPlayer, difficulty);
         console.log('doAi: ', col);
         // apply via the same handler, but mark as AI so the guard lets it through
         handleColumnClick(col, { fromAI: true });
@@ -181,8 +179,8 @@ export default function GamePage() {
 
     // run after paint; don't cancel to avoid races
     setTimeout(() => {
-      const depth = depthForDifficulty(difficulty);
-      const col = aiBestMove(board, current, aiPlayer, depth);
+      const col = aiChooseMove(board, current, aiPlayer, difficulty);
+      console.log('doAi: ', col);
       handleColumnClick(col, { fromAI: true });
     }, 0);
   }, [

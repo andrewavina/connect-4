@@ -15,6 +15,8 @@ import {
   nextPlayer,
 } from '@/lib/game/engine';
 
+const ORDER = [3, 2, 4, 1, 5, 0, 6] as const;
+
 /** Difficulty → search depth */
 export function depthForDifficulty(d: 1 | 2 | 3) {
   return d === 1 ? 3 : d === 2 ? 5 : 7;
@@ -36,11 +38,10 @@ export function aiBestMove(
   if (blockCol !== -1) return blockCol;
 
   // Otherwise, search normally (negamax + alpha-beta).
-  const order = [3, 2, 4, 1, 5, 0, 6];
-  let bestCol = order[0];
+  let bestCol: number = ORDER[0];
   let bestScore = -Infinity;
 
-  for (const col of order) {
+  for (const col of ORDER) {
     try {
       const { board: b2, row, col: c2 } = applyMove(board, col, current);
       const win = checkWin(b2, row, c2);
@@ -66,10 +67,85 @@ export function aiBestMove(
   return bestCol;
 }
 
+export function aiChooseMove(
+  board: Board,
+  current: Player,
+  aiPlayer: Player,
+  difficulty: 1 | 2 | 3
+): number {
+  // 1) Force tactical sanity
+  const winCol = findImmediateWin(board, aiPlayer);
+  if (winCol !== -1) return winCol;
+  const blockCol = findImmediateBlock(board, aiPlayer);
+  if (blockCol !== -1) return blockCol;
+
+  // 2) Depth by difficulty
+  const depth = depthForDifficulty(difficulty);
+
+  // 3) Score all legal moves (negamax); keep columns + scores
+  const scored: Array<{ col: number; score: number }> = [];
+  for (const col of ORDER) {
+    try {
+      const { board: b2, row, col: c2 } = applyMove(board, col, current);
+      const win = checkWin(b2, row, c2);
+      const score =
+        win && win.winner === aiPlayer
+          ? Infinity
+          : -negamax(
+              b2,
+              nextPlayer(current),
+              aiPlayer,
+              depth - 1,
+              -Infinity,
+              Infinity
+            );
+      scored.push({ col, score });
+    } catch {
+      /* column full */
+    }
+  }
+  if (scored.length === 0) return 3; // fallback (shouldn't happen)
+
+  // 4) Pick by difficulty
+  // Hard = strict best; Medium = best (deterministic);
+  // Easy = softmax among top 2-3 so it feels human.
+  scored.sort((a, b) => b.score - a.score);
+
+  if (difficulty === 1) {
+    const topK = scored.slice(0, Math.min(3, scored.length));
+    return softmaxPick(topK, 0.6);
+  }
+
+  // Medium / Hard → best
+  return scored[0].col;
+}
+
+function softmaxPick(
+  cols: Array<{ col: number; score: number }>,
+  temperature = 0.6
+): number {
+  // normalize scores to [0,1] range to avoid overflow
+  const max = Math.max(...cols.map((c) => c.score));
+  const min = Math.min(...cols.map((c) => c.score));
+  const norm = cols.map((c) => ({
+    col: c.col,
+    s: max === min ? 0.5 : (c.score - min) / (max - min),
+  }));
+  const weights = norm.map(({ s }) =>
+    Math.exp(s / Math.max(0.05, temperature))
+  );
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < cols.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return cols[i].col;
+  }
+  return cols[0].col;
+}
+
 // Return a winning column for `player` this move, or -1 if none.
 function findImmediateWin(board: Board, player: Player): number {
-  const order = [3, 2, 4, 1, 5, 0, 6]; // center-first
-  for (const col of order) {
+  for (const col of ORDER) {
     try {
       const { board: b2, row, col: c2 } = applyMove(board, col, player);
       const win = checkWin(b2, row, c2);
@@ -84,8 +160,7 @@ function findImmediateWin(board: Board, player: Player): number {
 // Return a blocking column (opponent can win next move), or -1 if no threat.
 function findImmediateBlock(board: Board, aiPlayer: Player): number {
   const opp = nextPlayer(aiPlayer);
-  const order = [3, 2, 4, 1, 5, 0, 6];
-  for (const col of order) {
+  for (const col of ORDER) {
     try {
       const { board: b2, row, col: c2 } = applyMove(board, col, opp);
       const win = checkWin(b2, row, c2);
@@ -112,10 +187,9 @@ function negamax(
   if (term !== null) return term;
   if (depth === 0) return heuristic(board, aiPlayer);
 
-  const order = [3, 2, 4, 1, 5, 0, 6];
   let maxScore = -Infinity;
 
-  for (const col of order) {
+  for (const col of ORDER) {
     try {
       const { board: b2, row, col: c2 } = applyMove(board, col, current);
       const win = checkWin(b2, row, c2);
