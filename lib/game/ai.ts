@@ -27,7 +27,15 @@ export function aiBestMove(
   aiPlayer: Player,
   depth: number
 ): number {
-  // move ordering: center first is strong in Connect Four
+  // First: if AI can win now, do it.
+  const winCol = findImmediateWin(board, aiPlayer);
+  if (winCol !== -1) return winCol;
+
+  // Second: if opponent can win next, block it.
+  const blockCol = findImmediateBlock(board, aiPlayer);
+  if (blockCol !== -1) return blockCol;
+
+  // Otherwise, search normally (negamax + alpha-beta).
   const order = [3, 2, 4, 1, 5, 0, 6];
   let bestCol = order[0];
   let bestScore = -Infinity;
@@ -56,6 +64,37 @@ export function aiBestMove(
     }
   }
   return bestCol;
+}
+
+// Return a winning column for `player` this move, or -1 if none.
+function findImmediateWin(board: Board, player: Player): number {
+  const order = [3, 2, 4, 1, 5, 0, 6]; // center-first
+  for (const col of order) {
+    try {
+      const { board: b2, row, col: c2 } = applyMove(board, col, player);
+      const win = checkWin(b2, row, c2);
+      if (win && win.winner === player) return col;
+    } catch {
+      /* column full */
+    }
+  }
+  return -1;
+}
+
+// Return a blocking column (opponent can win next move), or -1 if no threat.
+function findImmediateBlock(board: Board, aiPlayer: Player): number {
+  const opp = nextPlayer(aiPlayer);
+  const order = [3, 2, 4, 1, 5, 0, 6];
+  for (const col of order) {
+    try {
+      const { board: b2, row, col: c2 } = applyMove(board, col, opp);
+      const win = checkWin(b2, row, c2);
+      if (win && win.winner === opp) return col; // block here now
+    } catch {
+      /* column full */
+    }
+  }
+  return -1;
 }
 
 /** Negamax (minimax variant) with alpha-beta pruning */
