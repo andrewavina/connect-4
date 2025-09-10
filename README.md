@@ -61,7 +61,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Supabase auth is wired but currently disabled in production. You can re-enable it later by removing the temporary redirect on `/login` and adjusting middleware/protected routes.
 
-🧪 Testing the Engine
+## 🧪 Testing the Engine
 
 The game logic is pure and easy to test. Example test ideas:
 
@@ -71,11 +71,19 @@ The game logic is pure and easy to test. Example test ideas:
 
 Draw detection when board is full
 
-🧭 Roadmap
+### Why not use an LLM for the computer player?
 
-✅ Human vs Computer (alpha-beta minimax)
+This project uses a classic game-AI approach—[`lib/game/engine.ts`](lib/game/engine.ts) + [`lib/game/ai.ts`](lib/game/ai.ts) with alpha-beta minimax—rather than calling OpenAI/Claude to pick moves. That’s intentional:
 
-✅ Ghost previews, drop animation, win celebration
+- **Correct tool for the job**: Connect Four is deterministic, perfect-information, and small enough to solve well with search. A rules-based engine evaluates positions precisely; an LLM can “hallucinate” illegal or weak moves unless heavily constrained.
+- **Latency & UX**: Search runs locally in a few milliseconds; no network round-trips. The UI stays responsive and moves feel instant.
+- **Cost & reliability**: No API costs, quotas, or external outages. Works offline and in CI.
+- **Determinism & testability**: Pure functions are easy to unit test (e.g., win detection, applyMove). Same input → same output.
+- **Strength that scales**: We can raise difficulty by depth, heuristics, and (later) transposition tables/iterative deepening without changing the UI.
+
+**When an LLM _would_ make sense here:** explaining a move (“why the AI chose column 3”), generating coaching tips, or picking among the top N engine moves for variety—always with validation and a fast local fallback.
+
+## 🧭 Roadmap
 
 ⏳ Saved W/L/T history per user (Supabase + RLS)
 
@@ -83,16 +91,16 @@ Draw detection when board is full
 
 ⏳ Replay viewer (step through moves)
 
-🖼️ Screens / GIF
+## 🖼️ Screens / GIF
 
-(Add a short GIF of gameplay here — ghost preview → drop → win confetti.)
+- TODO - (Add a short GIF of gameplay here — ghost preview → drop → win confetti.)
 
-🛠️ Deploy
+## 🛠️ Deploy
 
 Deployed on Vercel (one-click from GitHub). Environment variables are only required when enabling Supabase auth/history.
+
+---
 
 License
 
 MIT © Andrew Avina
-
-If you want, I can also generate a crisp **Open Graph image** (OG) for pretty link previews and add a couple of **engine unit tests** to kickstart the `/__tests__` folder.
