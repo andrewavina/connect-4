@@ -267,6 +267,7 @@ export default function GamePage() {
         {/* Mode toggle */}
         <div className="inline-flex rounded-full border p-0.5">
           <button
+            data-testid="mode-local"
             type="button"
             onClick={() => setMode('local')}
             disabled={hasStarted}
@@ -277,6 +278,7 @@ export default function GamePage() {
             Local
           </button>
           <button
+            data-testid="mode-ai"
             type="button"
             onClick={() => setMode('ai')}
             disabled={hasStarted}
@@ -293,6 +295,7 @@ export default function GamePage() {
           <>
             <label className="inline-flex items-center gap-2 text-sm">
               <input
+                data-testid="you-first"
                 type="checkbox"
                 checked={youGoFirst}
                 onChange={(e) => setYouGoFirst(e.target.checked)}
@@ -305,6 +308,7 @@ export default function GamePage() {
             <label className="inline-flex items-center gap-2 text-sm">
               Difficulty
               <select
+                data-testid="difficulty"
                 value={difficulty}
                 onChange={(e) =>
                   setDifficulty(Number(e.target.value) as 1 | 2 | 3)
@@ -329,9 +333,13 @@ export default function GamePage() {
 
       {/* Controls */}
       <div className="mb-6 flex items-center justify-between">
-        <div aria-live="polite" className="text-sm text-muted-foreground">
+        <div
+          aria-live="polite"
+          className="text-sm text-muted-foreground"
+          data-testid="status"
+        >
           {winningLine ? (
-            <span>
+            <span data-testid="winner">
               {/* <WinnerLabel line={winningLine} /> wins! */}
               <WinnerLabel /> wins!
             </span>
@@ -344,12 +352,14 @@ export default function GamePage() {
 
         <div className="flex items-center gap-3">
           <button
+            data-testid="new-game"
             onClick={onNewGame}
             className="rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             New Game
           </button>
           <button
+            data-testid="undo"
             onClick={onUndo}
             disabled={history.length === 0 || !!winningLine}
             className="rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
@@ -395,6 +405,7 @@ export default function GamePage() {
               <button
                 key={c}
                 type="button"
+                data-testid={`col-${c}`}
                 aria-label={`Drop in column ${c + 1}`}
                 onClick={() => handleColumnClick(c)}
                 onMouseEnter={() => setHoverCol(c)}
