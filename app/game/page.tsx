@@ -50,6 +50,11 @@ export default function GamePage() {
 
   const gameEnded = !!winningLine || draw;
 
+  const showUndo = mode === 'local';
+  const canUndo = showUndo && history.length > 0 && !winningLine && !draw;
+
+  const winnerPlayer: Player | null = winningLine ? current : null;
+
   const onNewGame = useCallback(() => {
     setBoard(createBoard());
     setCurrent('R');
@@ -63,12 +68,20 @@ export default function GamePage() {
   const onUndo = useCallback(() => {
     if (history.length === 0) return;
     const prev = history[history.length - 1];
+
+    // pop history first
     setHistory((h) => h.slice(0, -1));
+
+    // restore snapshot
     setBoard(prev.board);
     setCurrent(prev.current);
     setLastMove(prev.lastMove);
+
+    // clear end-state & AI state
     setWinningLine(null);
     setDraw(false);
+    setThinking(false);
+    lastAiTurnRef.current = -1; // <-- allow AI to schedule again on this restored turn
   }, [history]);
 
   const handleColumnClick = useCallback(
@@ -210,18 +223,25 @@ export default function GamePage() {
     if (!ctx) return;
 
     // simple confetti particles
-    const colors = ['#ef4444', '#facc15', '#60a5fa', '#34d399', '#f472b6'];
+    const colors = [
+      '#ef4444',
+      '#facc15',
+      '#8b5cf6',
+      '#06d6a0',
+      '#f72585',
+      '#4cc9f0',
+    ];
     const N = 120;
     const P = Array.from({ length: N }, () => ({
       x: Math.random() * canvas.width,
       y: -10 - Math.random() * 40,
-      vx: (Math.random() - 0.5) * 2.2,
-      vy: -(2 + Math.random() * 2),
-      g: 0.12 + Math.random() * 0.08,
-      s: 2 + Math.random() * 3,
+      vx: (Math.random() - 0.5) * 4,
+      vy: -(2 + Math.random() * 3),
+      g: 0.15 + Math.random() * 0.1,
+      s: 2 + Math.random() * 4,
       c: colors[(Math.random() * colors.length) | 0],
       rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.2,
+      vr: (Math.random() - 0.5) * 0.3,
     }));
 
     let raf = 0;
@@ -260,112 +280,97 @@ export default function GamePage() {
   console.log("'GamePage' render: ", { winningLine });
 
   return (
-    <section className="mx-auto max-w-3xl">
-      <div className="flex items-center gap-3">
-        {/* Mode toggle */}
-        <div className="inline-flex rounded-full border p-0.5">
-          <button
-            data-testid="mode-local"
-            type="button"
-            onClick={() => setMode('local')}
-            disabled={hasStarted}
-            className={`px-3 py-1.5 text-sm rounded-full ${
-              mode === 'local' ? 'bg-muted' : ''
-            } disabled:opacity-50 disabled:pointer-events-none`}
-          >
-            Local
-          </button>
-          <button
-            data-testid="mode-ai"
-            type="button"
-            onClick={() => setMode('ai')}
-            disabled={hasStarted}
-            className={`px-3 py-1.5 text-sm rounded-full ${
-              mode === 'ai' ? 'bg-muted' : ''
-            } disabled:opacity-50 disabled:pointer-events-none`}
-          >
-            vs Computer
-          </button>
-        </div>
-
-        {/* AI-only options */}
-        {mode === 'ai' && (
-          <>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                data-testid="you-first"
-                type="checkbox"
-                checked={youGoFirst}
-                onChange={(e) => setYouGoFirst(e.target.checked)}
-                className="h-4 w-4"
-                disabled={hasStarted}
-              />
-              You go first
-            </label>
-
-            <label className="inline-flex items-center gap-2 text-sm">
-              Difficulty
-              <select
-                data-testid="difficulty"
-                value={difficulty}
-                onChange={(e) =>
-                  setDifficulty(Number(e.target.value) as 1 | 2 | 3)
-                }
-                disabled={hasStarted}
-                className="rounded-md border bg-background px-2 py-1 text-sm"
-              >
-                <option value={1}>Easy</option>
-                <option value={2}>Medium</option>
-                <option value={3}>Hard</option>
-              </select>
-            </label>
-
-            {thinking && (
-              <span className="text-sm text-muted-foreground">
-                Computer is thinking…
-              </span>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="mb-6 flex items-center justify-between">
-        <div
-          aria-live="polite"
-          className="text-sm text-muted-foreground"
-          data-testid="status"
-        >
-          {winningLine ? (
-            <span data-testid="winner">
-              {/* <WinnerLabel line={winningLine} /> wins! */}
-              <WinnerLabel /> wins!
-            </span>
-          ) : draw ? (
-            <span>It’s a draw.</span>
-          ) : (
-            <TurnLabel player={current} />
-          )}
-        </div>
-
+    <section className="mx-auto max-w-3xl space-y-8">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
-            data-testid="new-game"
-            onClick={onNewGame}
-            className="rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            New Game
-          </button>
-          <button
-            data-testid="undo"
-            onClick={onUndo}
-            disabled={history.length === 0 || !!winningLine}
-            className="rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-            aria-disabled={history.length === 0 || !!winningLine}
-            title={winningLine ? 'Undo disabled after a win' : 'Undo last move'}
-          >
-            Undo
-          </button>
+          <div className="inline-flex rounded-full border p-0.5 bg-muted/30">
+            {/* Mode toggle */}
+            <button
+              data-testid="mode-local"
+              type="button"
+              onClick={() => setMode('local')}
+              disabled={hasStarted}
+              className={`px-3 py-1.5 text-sm rounded-full font-medium transition-all duration-200 ${
+                mode === 'local'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'hover:bg-muted/60'
+              } disabled:opacity-50 disabled:pointer-events-none`}
+            >
+              Local
+            </button>
+            <button
+              data-testid="mode-ai"
+              type="button"
+              onClick={() => setMode('ai')}
+              disabled={hasStarted}
+              className={`px-3 py-1.5 text-sm rounded-full font-medium transition-all duration-200 ${
+                mode === 'ai'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'hover:bg-muted/60'
+              } disabled:opacity-50 disabled:pointer-events-none`}
+            >
+              vs Computer
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* AI-only options */}
+            {mode === 'ai' && (
+              <>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    data-testid="you-first"
+                    type="checkbox"
+                    checked={youGoFirst}
+                    onChange={(e) => setYouGoFirst(e.target.checked)}
+                    className="h-4 w-4"
+                    disabled={hasStarted}
+                  />
+                  You go first
+                </label>
+
+                <label className="inline-flex items-center gap-2 text-sm">
+                  Difficulty
+                  <select
+                    data-testid="difficulty"
+                    value={difficulty}
+                    onChange={(e) =>
+                      setDifficulty(Number(e.target.value) as 1 | 2 | 3)
+                    }
+                    disabled={hasStarted}
+                    className="rounded-md border bg-background px-2 py-1 text-sm"
+                  >
+                    <option value={1}>Easy</option>
+                    <option value={2}>Medium</option>
+                    <option value={3}>Hard</option>
+                  </select>
+                </label>
+
+                {thinking && (
+                  <span className="text-sm text-muted-foreground">
+                    Computer is thinking…
+                  </span>
+                )}
+              </>
+            )}
+            <button
+              data-testid="new-game"
+              onClick={onNewGame}
+              className="rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              New Game
+            </button>
+            {showUndo && (
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                className="rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                aria-disabled={!canUndo}
+                title={!canUndo ? 'Nothing to undo' : 'Undo last move'}
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -373,7 +378,7 @@ export default function GamePage() {
       <div className="mx-auto w-[min(92vw,calc(100dvh-260px))]">
         <div
           ref={boardShellRef}
-          className="relative rounded-xl border bg-muted p-2 shadow-inner"
+          className="relative rounded-xl border board-3d p-2"
         >
           {/* Visual grid of cells */}
           <div
@@ -410,7 +415,7 @@ export default function GamePage() {
                 onMouseLeave={() => setHoverCol(null)}
                 onFocus={() => setHoverCol(c)}
                 onBlur={() => setHoverCol(null)}
-                className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:bg-foreground/10 hover:backdrop-brightness-110 focus:bg-foreground/15 focus:backdrop-brightness-125"
+                className="pointer-events-auto h-full w-full rounded-md focus:outline-none hover:column-hover focus:column-hover transition-all duration-200"
               />
             ))}
           </div>
@@ -422,12 +427,21 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* Footer status (redundant but nice) */}
+      {/* Footer status  */}
       <div className="mt-6 text-center">
         {winningLine ? (
-          <p className="text-lg font-medium">
-            {/* <WinnerLabel line={winningLine} /> wins! */}
-            <WinnerLabel /> wins!
+          <p className="text-lg font-semibold" data-testid="winner">
+            {mode === 'ai' ? (
+              winnerPlayer === humanPlayer ? (
+                <>You win!</>
+              ) : (
+                <>Computer wins!</>
+              )
+            ) : (
+              <>
+                <WinnerLabel player={winnerPlayer!} /> wins!
+              </>
+            )}
           </p>
         ) : draw ? (
           <p className="text-lg font-medium">It’s a draw.</p>
@@ -529,7 +543,7 @@ const Disc = ({
     // RED
     return (
       <div
-        className={`${base} bg-red-500/90 ring-1 ring-foreground/10 ${anim} ${
+        className={`${base} disc-red ring-1 ring-foreground/10 ${anim} ${
           winning ? 'animate-win win-glow-red' : ''
         }`}
       />
@@ -539,7 +553,7 @@ const Disc = ({
     // YELLOW
     return (
       <div
-        className={`${base} bg-yellow-400/90 ring-1 ring-foreground/10 ${anim} ${
+        className={`${base} disc-yellow ring-1 ring-foreground/10 ${anim} ${
           winning ? 'animate-win win-glow-yellow' : ''
         }`}
       />
@@ -548,23 +562,13 @@ const Disc = ({
   // empty slot + (optional) ghost overlay
   return (
     <>
-      <div
-        className={`${base} ring-1 ring-foreground/10`}
-        style={{
-          background:
-            'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.08), rgba(0,0,0,0.06) 60%, transparent 70%)',
-        }}
-      />
+      <div className={`${base} ring-1 ring-foreground/10 slot-depth`} />
       {showGhost && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div
-            className="h-[92%] w-[92%] rounded-full ring-1 ring-foreground/15"
-            style={{
-              background:
-                current === 'R'
-                  ? 'rgba(239,68,68,0.35)'
-                  : 'rgba(250,204,21,0.40)',
-            }}
+            className={`h-[92%] w-[92%] rounded-full ghost-disc ghost-pulse ${
+              current === 'R' ? 'ghost-disc-red' : 'ghost-disc-yellow'
+            }`}
           />
         </div>
       )}
@@ -575,7 +579,11 @@ const Disc = ({
 function TurnLabel({ player }: { player: Player }) {
   return (
     <>
-      <span className={player === 'R' ? 'text-red-500' : 'text-yellow-500'}>
+      <span
+        className={`${
+          player === 'R' ? 'text-red-500' : 'text-yellow-500'
+        } turn-pulse font-semibold`}
+      >
         {player === 'R' ? 'Red' : 'Yellow'}
       </span>
       <span>’s turn</span>
@@ -583,14 +591,8 @@ function TurnLabel({ player }: { player: Player }) {
   );
 }
 
-// function WinnerLabel({ line }: { line: [number, number][] }) {
-function WinnerLabel() {
-  // winner color is implied by any cell in the line; UI text only
-  // (board uses 1=R, 2=Y; we don’t read it here to keep it presentational)
-  // For label, just say “Red” if the first cell in the line belongs to Red.
-  // If you want this strictly correct from state, you can pass the winner string down.
-  // const first = line[0];
-  // const color = first ? first : null;
-  // This component only renders when there is a win; color in page text is handled above.
-  return <span>Player</span>;
+function WinnerLabel({ player }: { player: Player }) {
+  const text = player === 'R' ? 'Red' : 'Yellow';
+  const cls = player === 'R' ? 'text-red-500' : 'text-yellow-500';
+  return <span className={`${cls} font-semibold`}>{text}</span>;
 }
