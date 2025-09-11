@@ -53,6 +53,8 @@ export default function GamePage() {
   const showUndo = mode === 'local';
   const canUndo = showUndo && history.length > 0 && !winningLine && !draw;
 
+  const winnerPlayer: Player | null = winningLine ? current : null;
+
   const onNewGame = useCallback(() => {
     setBoard(createBoard());
     setCurrent('R');
@@ -278,115 +280,97 @@ export default function GamePage() {
   console.log("'GamePage' render: ", { winningLine });
 
   return (
-    <section className="mx-auto max-w-3xl">
-      <div className="flex items-center gap-3">
-        {/* Mode toggle */}
-        <div className="inline-flex rounded-full border p-0.5">
-          <button
-            data-testid="mode-local"
-            type="button"
-            onClick={() => setMode('local')}
-            disabled={hasStarted}
-            className={`px-3 py-1.5 text-sm rounded-full ${
-              mode === 'local' ? 'bg-muted' : ''
-            } disabled:opacity-50 disabled:pointer-events-none`}
-          >
-            Local
-          </button>
-          <button
-            data-testid="mode-ai"
-            type="button"
-            onClick={() => setMode('ai')}
-            disabled={hasStarted}
-            className={`px-3 py-1.5 text-sm rounded-full ${
-              mode === 'ai' ? 'bg-muted' : ''
-            } disabled:opacity-50 disabled:pointer-events-none`}
-          >
-            vs Computer
-          </button>
-        </div>
-
-        {/* AI-only options */}
-        {mode === 'ai' && (
-          <>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                data-testid="you-first"
-                type="checkbox"
-                checked={youGoFirst}
-                onChange={(e) => setYouGoFirst(e.target.checked)}
-                className="h-4 w-4"
-                disabled={hasStarted}
-              />
-              You go first
-            </label>
-
-            <label className="inline-flex items-center gap-2 text-sm">
-              Difficulty
-              <select
-                data-testid="difficulty"
-                value={difficulty}
-                onChange={(e) =>
-                  setDifficulty(Number(e.target.value) as 1 | 2 | 3)
-                }
-                disabled={hasStarted}
-                className="rounded-md border bg-background px-2 py-1 text-sm"
-              >
-                <option value={1}>Easy</option>
-                <option value={2}>Medium</option>
-                <option value={3}>Hard</option>
-              </select>
-            </label>
-
-            {thinking && (
-              <span className="text-sm text-muted-foreground">
-                Computer is thinking…
-              </span>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="mb-6 flex items-center justify-between">
-        <div
-          aria-live="polite"
-          className="text-sm text-muted-foreground"
-          data-testid="status"
-        >
-          {winningLine ? (
-            <span data-testid="winner">
-              {/* <WinnerLabel line={winningLine} /> wins! */}
-              <WinnerLabel /> wins!
-            </span>
-          ) : draw ? (
-            <span>It’s a draw.</span>
-          ) : (
-            <TurnLabel player={current} />
-          )}
-        </div>
-
+    <section className="mx-auto max-w-3xl space-y-8">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
-            data-testid="new-game"
-            onClick={onNewGame}
-            className="rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            New Game
-          </button>
-          {showUndo && (
+          <div className="inline-flex rounded-full border p-0.5 bg-muted/30">
+            {/* Mode toggle */}
             <button
-              onClick={onUndo}
-              disabled={!canUndo}
-              className="rounded-full border px-4 py-2 text-sm font-medium transition
-               focus:outline-none focus:ring-2 focus:ring-ring
-               disabled:cursor-not-allowed disabled:opacity-60"
-              aria-disabled={!canUndo}
-              title={!canUndo ? 'Nothing to undo' : 'Undo last move'}
+              data-testid="mode-local"
+              type="button"
+              onClick={() => setMode('local')}
+              disabled={hasStarted}
+              className={`px-3 py-1.5 text-sm rounded-full font-medium transition-all duration-200 ${
+                mode === 'local'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'hover:bg-muted/60'
+              } disabled:opacity-50 disabled:pointer-events-none`}
             >
-              Undo
+              Local
             </button>
-          )}
+            <button
+              data-testid="mode-ai"
+              type="button"
+              onClick={() => setMode('ai')}
+              disabled={hasStarted}
+              className={`px-3 py-1.5 text-sm rounded-full font-medium transition-all duration-200 ${
+                mode === 'ai'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'hover:bg-muted/60'
+              } disabled:opacity-50 disabled:pointer-events-none`}
+            >
+              vs Computer
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* AI-only options */}
+            {mode === 'ai' && (
+              <>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    data-testid="you-first"
+                    type="checkbox"
+                    checked={youGoFirst}
+                    onChange={(e) => setYouGoFirst(e.target.checked)}
+                    className="h-4 w-4"
+                    disabled={hasStarted}
+                  />
+                  You go first
+                </label>
+
+                <label className="inline-flex items-center gap-2 text-sm">
+                  Difficulty
+                  <select
+                    data-testid="difficulty"
+                    value={difficulty}
+                    onChange={(e) =>
+                      setDifficulty(Number(e.target.value) as 1 | 2 | 3)
+                    }
+                    disabled={hasStarted}
+                    className="rounded-md border bg-background px-2 py-1 text-sm"
+                  >
+                    <option value={1}>Easy</option>
+                    <option value={2}>Medium</option>
+                    <option value={3}>Hard</option>
+                  </select>
+                </label>
+
+                {thinking && (
+                  <span className="text-sm text-muted-foreground">
+                    Computer is thinking…
+                  </span>
+                )}
+              </>
+            )}
+            <button
+              data-testid="new-game"
+              onClick={onNewGame}
+              className="rounded-full border px-4 py-2 text-sm font-medium transition hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              New Game
+            </button>
+            {showUndo && (
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                className="rounded-full border px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                aria-disabled={!canUndo}
+                title={!canUndo ? 'Nothing to undo' : 'Undo last move'}
+              >
+                Undo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -443,12 +427,21 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* Footer status (redundant but nice) */}
+      {/* Footer status  */}
       <div className="mt-6 text-center">
         {winningLine ? (
-          <p className="text-lg font-medium">
-            {/* <WinnerLabel line={winningLine} /> wins! */}
-            <WinnerLabel /> wins!
+          <p className="text-lg font-semibold" data-testid="winner">
+            {mode === 'ai' ? (
+              winnerPlayer === humanPlayer ? (
+                <>You win!</>
+              ) : (
+                <>Computer wins!</>
+              )
+            ) : (
+              <>
+                <WinnerLabel player={winnerPlayer!} /> wins!
+              </>
+            )}
           </p>
         ) : draw ? (
           <p className="text-lg font-medium">It’s a draw.</p>
@@ -598,14 +591,8 @@ function TurnLabel({ player }: { player: Player }) {
   );
 }
 
-// function WinnerLabel({ line }: { line: [number, number][] }) {
-function WinnerLabel() {
-  // winner color is implied by any cell in the line; UI text only
-  // (board uses 1=R, 2=Y; we don’t read it here to keep it presentational)
-  // For label, just say “Red” if the first cell in the line belongs to Red.
-  // If you want this strictly correct from state, you can pass the winner string down.
-  // const first = line[0];
-  // const color = first ? first : null;
-  // This component only renders when there is a win; color in page text is handled above.
-  return <span>Player</span>;
+function WinnerLabel({ player }: { player: Player }) {
+  const text = player === 'R' ? 'Red' : 'Yellow';
+  const cls = player === 'R' ? 'text-red-500' : 'text-yellow-500';
+  return <span className={`${cls} font-semibold`}>{text}</span>;
 }
