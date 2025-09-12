@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest",
     "test:watch": "vitest --watch",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:watch": "playwright test --watch",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -429,6 +429,14 @@ export default function GamePage() {
 
       {/* Footer status  */}
       <div className="mt-6 text-center">
+        {/* test hooks (hidden) */}
+        <span data-testid="move-count" className="sr-only">
+          {history.length}
+        </span>
+        <span data-testid="thinking" className="sr-only">
+          {thinking ? '1' : '0'}
+        </span>
+
         {winningLine ? (
           <p className="text-lg font-semibold" data-testid="winner">
             {mode === 'ai' ? (
@@ -446,7 +454,7 @@ export default function GamePage() {
         ) : draw ? (
           <p className="text-lg font-medium">It’s a draw.</p>
         ) : (
-          <p className="text-lg">
+          <p className="text-lg" data-testid="status">
             <TurnLabel player={current} />
           </p>
         )}

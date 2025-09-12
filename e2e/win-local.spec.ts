@@ -13,6 +13,6 @@ test('local play: Red wins horizontally', async ({ page }) => {
   await click(2);
   await click(3);
 
-  await expect(page.getByTestId('winner')).toHaveText(/Red/i);
-  await expect(page.getByTestId('status')).toContainText(/wins/i);
+  await expect(page.getByTestId('winner')).toHaveText(/Red wins!?/i);
+  await expect(page.getByTestId('status')).toHaveCount(0);
 });
