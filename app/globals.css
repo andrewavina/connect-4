@@ -16,7 +16,8 @@
   --ring: 59 130 246;
 }
 
-[data-theme='dark'] {
+/* Change from [data-theme='dark'] to just .dark for Tailwind compatibility */
+.dark {
   /* page surface + text (DARK) */
   --background: 10 12 16; /* near-black/slate */
   --foreground: 226 232 240; /* slate-200-ish */
@@ -31,7 +32,7 @@
   --ring: 147 197 253;
 }
 
-/* Tailwind v4 token bridge */
+/* Your existing custom classes - keep all of these! */
 .bg-background {
   background-color: rgb(var(--background));
 }
@@ -66,6 +67,7 @@
   color: rgb(var(--primary-foreground));
 }
 
+/* Keep all your existing game-specific animations and styles */
 @keyframes chip-drop {
   from {
     transform: translateY(-16%);
